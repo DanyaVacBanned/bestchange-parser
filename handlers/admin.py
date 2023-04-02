@@ -5,7 +5,7 @@ from aiogram.dispatcher.storage import FSMContext
 
 from utils.fsm import BotStart
 
-from app import dp
+from app import dp, bot
 from app.webr import BestchangeUserAction
 
 from utils.nav import bot_navigation
@@ -67,8 +67,9 @@ async def get_response(message: types.Message, state=FSMContext):
         await state.finish()
         loop = asyncio.get_event_loop()
         await message.answer('Начинаю парсинг', reply_markup=bot_navigation.start_keyboard())
-        task = loop.create_task(best_change.get_rate_for_post(channel_id, message))
+        task = loop.create_task(best_change.get_rate_for_post(channel_id))
         await task
+        
         
     elif message.text == 'Нет':
         await message.answer(

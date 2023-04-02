@@ -8,8 +8,8 @@ from utils.nav import bot_navigation
 
 @dp.message_handler(commands='start')
 async def on_start(message: types.Message):
-    # await message.answer('Добро пожаловать!', reply_markup=bot_navigation.start_keyboard())
-    await message.answer(message.from_id)
+    await message.answer('Добро пожаловать!', reply_markup=bot_navigation.start_keyboard())
+    
 
 @dp.message_handler(text='Посмотреть перечень валют💸')
 async def check_values(message: types.Message):

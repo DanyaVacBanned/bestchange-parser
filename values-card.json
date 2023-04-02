@@ -1,0 +1,19 @@
+[
+{"Рубли":{"visa-mastercard-rub":"59"}},
+{"Доллары":{"visa-mastercard-usd":"58"}},
+{"Евро":{"visa-mastercard-euro":"65"}},
+{"Гривна":{"visa-mastercard-uah":"60"}},
+{"Белорусский рубль":{"visa-mastercard-byr":"54"}},
+{"Тенге":{"visa-mastercard-kzt":"111"}},
+{"Фунт":{"visa-mastercard-gbp":"146"}},
+{"Злотый":{"visa-mastercard-pln":"38"}},
+{"Крона":{"visa-mastercard-czk":"224"}},
+{"Лари":{"visa-mastercard-gel":"238"}},
+{"Армянский драм":{"visa-mastercard-amd":"5"}},
+{"Канадский доллар":{"visa-mastercard-cad":"221"}},
+{"Нигерийская найра":{"visa-mastercard-ngn":"258"}},
+{"Болгарский лев":{"visa-mastercard-bgn":"222"}},
+{"Азербайджанский манат":{"visa-mastercard-azn":"237"}},
+{"Молдавский лей":{"visa-mastercard-mdl":"194"}}
+
+]

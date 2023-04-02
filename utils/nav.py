@@ -4,14 +4,56 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 class BotNav:
     def start_keyboard(self):
-        return ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('Получить информацию по курсу обмена💵')).add(KeyboardButton('Посмотреть перечень валют💸'))
+        return ReplyKeyboardMarkup(
+            resize_keyboard=True
+            ).add(KeyboardButton('Получить информацию по курсу обмена💵')).add(KeyboardButton('Посмотреть перечень валют💸'))
 
     def admin_keyboard(self):
-        return ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('Запустить постинг🖨'))
+        return ReplyKeyboardMarkup(
+            resize_keyboard=True
+            ).add(KeyboardButton('Запустить постинг🖨'))
 
     def confirmation_keyboard(self):
-        return ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('Да')).add(KeyboardButton('Нет'))
+        return ReplyKeyboardMarkup(
+            resize_keyboard=True
+            ).add(KeyboardButton('Да')).add(KeyboardButton('Нет'))
  
+    def value_type(self):
+        return ReplyKeyboardMarkup(
+            resize_keyboard=True
+            ).add(
+            KeyboardButton(text='Криптовалюта')
+            ).add(
+            KeyboardButton(text='Рубли')
+            ).add(
+            KeyboardButton(text="Валюта")
+            ).add(
+            KeyboardButton(text="Вернуться в меню")
+            )
+    
+    def card_or_cash(self):
+        return ReplyKeyboardMarkup(
+            resize_keyboard=True
+            ).add(
+            KeyboardButton('Карта💳')
+            ).add(
+            KeyboardButton("Наличные💵")
+            )
+    
+    def crypto_or_other(self):
+        return ReplyKeyboardMarkup(
+            resize_keyboard=True
+            ).add(
+            KeyboardButton(text='В валюте')
+            ).add(
+            KeyboardButton(text='В криптовалюте')
+            )
+    
+    def multiply_keyboard(self, preset_names: list):
+        mult_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        for btn in preset_names:
+            mult_keyboard.add(KeyboardButton(text=btn))
+        return mult_keyboard.add(KeyboardButton('Вернуться в меню'))
 
 
 bot_navigation = BotNav()
