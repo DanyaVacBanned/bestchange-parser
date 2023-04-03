@@ -75,6 +75,8 @@ async def get_crypto_value(message: types.Message, state = FSMContext):
 
 @dp.message_handler(state=GetActualRate.CARD_OR_CASH)
 async def get_rubbles(message: types.Message, state=FSMContext):
+    async with state.proxy() as sp:
+        value_type = sp['from_value_type']
     if message.text == "Вернуться в меню":
         await state.finish()
         await message.answer("Вовзращаюсь назад", reply_markup=bot_navigation.start_keyboard())
@@ -85,11 +87,15 @@ async def get_rubbles(message: types.Message, state=FSMContext):
         elif message.text == "Карта💳":
             async with state.proxy() as sp:
                 sp['card_or_cash'] = 'card'
-        countries_list = shortcuts.get_keys_from_json('countries_and_cities')
-        
-        await message.answer('В какой стране вы хотите отдать?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
+        if value_type == "rubles":
+            cities_list = shortcuts.get_values_by_key_from_json('countries_and_cities','Россия')
+            await message.answer('Выберите город, в котором хотите отдать', reply_markup=bot_navigation.multiply_keyboard(cities_list))
+            await GetActualRate.CITY_GIVE.set()
+        else:
+            countries_list = shortcuts.get_keys_from_json('countries_and_cities')
+            await message.answer('В какой стране вы хотите отдать?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
 
-        await GetActualRate.COUNTRY_GIVE.set()
+            await GetActualRate.COUNTRY_GIVE.set()
     
 
 
@@ -99,7 +105,9 @@ async def get_country(message: types.Message, state=FSMContext):
     if message.text != 'Вернуться в меню':
         country = message.text
         async with state.proxy() as sp:
-            sp['country_get'] = country
+            sp['country_give'] = country
+
+
         cities = shortcuts.get_values_by_key_from_json('countries_and_cities', country)[0]
         
         await message.answer('Выберите город, в котором хотите отдать', reply_markup=bot_navigation.multiply_keyboard(cities))
@@ -113,7 +121,7 @@ async def get_country(message: types.Message, state=FSMContext):
 async def city_get_handler(message: types.Message, state = FSMContext):
     if message.text != 'Вернуться в меню':
         async with state.proxy() as sp:
-            sp['city_gibe'] = message.text
+            sp['city_give'] = message.text
         countries_list = shortcuts.get_keys_from_json('countries_and_cities')
         
         await message.answer('В какой стране вы хотите получить?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
@@ -128,7 +136,7 @@ async def country_get_handler(message: types.Message, state=FSMContext):
     if message.text != "Вернуться в меню":
         country = message.text
         async with state.proxy() as sp:
-            sp['country_give'] = country
+            sp['country_get'] = country
         cities = shortcuts.get_values_by_key_from_json('countries_and_cities', country)[0]
         
         await message.answer('Выберите город, в котором хотите получить', reply_markup=bot_navigation.multiply_keyboard(cities))
@@ -141,7 +149,7 @@ async def country_get_handler(message: types.Message, state=FSMContext):
 async def city_give_handler(message: types.Message, state=FSMContext):
     if message.text != "Вернуться в меню":
         async with state.proxy() as sp:
-            sp['city_give'] = message.text
+            sp['city_get'] = message.text
         await message.answer('Вы хотите получить: ', reply_markup=bot_navigation.crypto_or_other())
         await GetActualRate.GET_TO_VALUE_TYPE.set()
     else:

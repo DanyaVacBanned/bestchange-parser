@@ -1,6 +1,9 @@
+
 import requests
 import asyncio
-import random
+
+
+import undetected_chromedriver as uc
 
 from time import sleep
 
@@ -28,35 +31,30 @@ bot = Bot(token)
 class BestchangeUserAction:
     
     async def get_html_code(self, url, params = None) -> b:
-        proxies = None
-        proxy_list = shortcuts.get_proxy_list()
-        
         while True:
-            print(proxy_list)
-            current_proxy = proxy_list[random.randint(0,len(proxy_list)-1)]
             headers = {
             "user-agent":ua.random,
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
-            }
-            try:
-                r = requests.get(url, headers=headers, params=params, proxies=proxies)
-                print(r.status_code)
-            except Exception as ex:
-                logs_writer(ex)
-                proxy_list.remove(current_proxy)
-                current_proxy = proxy_list[random.randint(0,len(proxy_list)-1)]
-                proxies = {'https':current_proxy}
+                }
+        
+                    
+            r = requests.get(url,params=params, headers=headers)
+            print(r.status_code)
             if r.status_code == 200:
-                
-
-                soup = b(r.text, 'lxml')
-                return soup
-            else:
-                proxy_list.remove(current_proxy)
-                current_proxy = proxy_list[random.randint(0,len(proxy_list)-1)]
-                proxies = {'https':current_proxy}
-                
-
+                return b(r.text, 'lxml')
+            elif r.status_code == 429:
+                try:
+                    options = uc.ChromeOptions()
+                    options.headless = True
+                    driver = uc.Chrome(options=options, version_main=109)
+                    
+                    driver.get('https://www.bestchange.ru/')
+                    await asyncio.sleep(15)
+                    driver.quit()
+                except Exception as ex:
+                    print(ex)
+                    logs_writer(ex)
+                    continue
             
                 
  
@@ -319,6 +317,9 @@ class BestchangeUserAction:
         "sortm":"0",
         "tsid":"0",
         }
+
+        with open('requests.txt','a') as file:
+            file.write(f'req to https://www.bestchange.ru/ \n with params: {params}\n')
         rates = await self.get_rate('https://www.bestchange.ru/',params=params)
         if rates is None:
             return None
@@ -327,13 +328,13 @@ class BestchangeUserAction:
                 return {
                     "Обменник":rates[0]['Обменник'],
                     "Отдаете":rates[0]['Отдаете'],
-                    "Курс":f"1 {from_value_name} = {self.get_course(params)} {to_value_name}"
+                    "Курс":f"1 {to_value_name} = {await self.get_course(params)} {from_value_name}"
                     }
             elif get:
                 return {
                     "Обменник":rates[0]['Обменник'],
                     "Получаете":rates[0]['Получаете'],
-                    "Курс":f"1 {from_value_name} = {self.get_course(params)} {to_value_name}"
+                    "Курс":f"1 {to_value_name} = {await self.get_course(params)} {from_value_name}"
                     }
         else:
             return None
