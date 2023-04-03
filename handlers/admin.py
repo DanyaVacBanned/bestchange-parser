@@ -11,7 +11,7 @@ from app.webr import BestchangeUserAction
 from utils.nav import bot_navigation
 
 from config.auth import admin_id, developer_id
-
+from config.exhandler import logs_writer
 
 best_change = BestchangeUserAction()
 
@@ -49,7 +49,8 @@ async def get_channel_id(message: types.Message, state=FSMContext):
         await message.answer('Канал успешно выбран')
         await message.answer(f'Запустить постинг в канал с id {channel_id}?', reply_markup=bot_navigation.confirmation_keyboard())
         await BotStart.GET_RESPONSE.set()
-    except ValueError:
+    except ValueError as ex:
+        logs_writer(ex)
         await message.answer(
             """
             Некорекктно введено ID канала! Попробуйте снова.

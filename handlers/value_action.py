@@ -5,6 +5,8 @@ from aiogram.dispatcher.storage import FSMContext
 
 from app import dp, bc
 
+from config.exhandler import logs_writer
+
 from utils.fsm import GetActualRate
 from utils.nav import bot_navigation
 from utils import shortcuts
@@ -65,7 +67,7 @@ async def get_crypto_value(message: types.Message, state = FSMContext):
         countries_list = shortcuts.get_keys_from_json('countries_and_cities')
         
         await message.answer("В какой стране вы хотите отдать?", reply_markup=bot_navigation.multiply_keyboard(countries_list))
-        await GetActualRate.COUNTRY_GET.set()
+        await GetActualRate.COUNTRY_GIVE.set()
 
     else:
         await state.finish()
@@ -87,12 +89,12 @@ async def get_rubbles(message: types.Message, state=FSMContext):
         
         await message.answer('В какой стране вы хотите отдать?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
 
-        await GetActualRate.COUNTRY_GET.set()
+        await GetActualRate.COUNTRY_GIVE.set()
     
 
 
 
-@dp.message_handler(state=GetActualRate.COUNTRY_GET)
+@dp.message_handler(state=GetActualRate.COUNTRY_GIVE)
 async def get_country(message: types.Message, state=FSMContext):
     if message.text != 'Вернуться в меню':
         country = message.text
@@ -101,27 +103,27 @@ async def get_country(message: types.Message, state=FSMContext):
         cities = shortcuts.get_values_by_key_from_json('countries_and_cities', country)[0]
         
         await message.answer('Выберите город, в котором хотите отдать', reply_markup=bot_navigation.multiply_keyboard(cities))
-        await GetActualRate.CITY_GET.set()
+        await GetActualRate.CITY_GIVE.set()
     else:
         await state.finish()
         await message.answer('Возвращаюсь назад',reply_markup=bot_navigation.start_keyboard())
 
 
-@dp.message_handler(state=GetActualRate.CITY_GET)
+@dp.message_handler(state=GetActualRate.CITY_GIVE)
 async def city_get_handler(message: types.Message, state = FSMContext):
     if message.text != 'Вернуться в меню':
         async with state.proxy() as sp:
-            sp['city_get'] = message.text
+            sp['city_gibe'] = message.text
         countries_list = shortcuts.get_keys_from_json('countries_and_cities')
         
         await message.answer('В какой стране вы хотите получить?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
-        await GetActualRate.COUNTRY_GIVE.set()
+        await GetActualRate.COUNTRY_GET.set()
 
     else:
         await state.finish()
         await message.answer('Возвращаюсь назад',reply_markup=bot_navigation.start_keyboard())
 
-@dp.message_handler(state=GetActualRate.COUNTRY_GIVE)
+@dp.message_handler(state=GetActualRate.COUNTRY_GET)
 async def country_get_handler(message: types.Message, state=FSMContext):
     if message.text != "Вернуться в меню":
         country = message.text
@@ -130,12 +132,12 @@ async def country_get_handler(message: types.Message, state=FSMContext):
         cities = shortcuts.get_values_by_key_from_json('countries_and_cities', country)[0]
         
         await message.answer('Выберите город, в котором хотите получить', reply_markup=bot_navigation.multiply_keyboard(cities))
-        await GetActualRate.CITY_GIVE.set()
+        await GetActualRate.CITY_GET.set()
     else:
         await state.finish()
         await message.answer('Возвращаюсь назад',reply_markup=bot_navigation.start_keyboard())
 
-@dp.message_handler(state=GetActualRate.CITY_GIVE)
+@dp.message_handler(state=GetActualRate.CITY_GET)
 async def city_give_handler(message: types.Message, state=FSMContext):
     if message.text != "Вернуться в меню":
         async with state.proxy() as sp:
@@ -185,61 +187,57 @@ async def get_count(message: types.Message, state = FSMContext):
     if message.text != "Вернуться в меню":
         try:
             count = int(message.text)
-            async with state.proxy() as sp:
-                from_value_type = sp['from_value_type']
-                to_value_type = sp['to_value_type']
-                to_value = sp['to_value']
-                from_value = sp['from_value']
-                card_or_cash = sp['card_or_cash']
-                city_get = sp['city_get']
-                city_give = sp['city_give']
-                country_get = sp['country_get']
-                country_give = sp['country_give']
-            if card_or_cash == 'card':
-                values_list = shortcuts.get_keys_from_json('values-card')
-
-            elif card_or_cash == 'cash':
-                values_list = shortcuts.get_keys_from_json('values')
-            
-            if to_value_type == 'crypto':
-                city_get = None
-                city_give = None
-
-            first_city = await bc.get_data_from_city(
-                from_value=from_value,
-                to_value=to_value,
-                city=city_give,
-                from_value_type=from_value_type,
-                to_value_type=to_value_type,
-                card_or_cash=card_or_cash,
-                count=count,
-                give=True
-                )
-            second_city = await bc.get_data_from_city(
-                from_value=from_value,
-                to_value=to_value,
-                city=city_give,
-                from_value_type=from_value_type,
-                to_value_type=to_value_type,
-                card_or_cash=card_or_cash,
-                count=count,
-                get= True
-                )
-            if first_city is not None and second_city is not None:
-                if city_get != None and city_give != None:
-                    await message.answer(
-                        f"Перевод из {country_give} ({city_give}) {first_city['Отдаете']} в {country_get} ({city_get}) {second_city['Получаете']}\n При курсе {first_city['Курс']}"
-                        )
-                else:
-                    await message.answer(
-                        f"Перевод {first_city['Отдаете']} в {second_city['Получаете']}\n При курсе {first_city['Курс']}"
-                        )
-            else:
-                await message.answer("Данных по вашему запросу не найденно")
-            
-            await state.finish()
-        except ValueError:
+        except ValueError as ex:
+            logs_writer(ex)
             await message.answer('Некорректный ввод, попробуйте еще раз')
+        async with state.proxy() as sp:
+            from_value_type = sp['from_value_type']
+            to_value_type = sp['to_value_type']
+            to_value = sp['to_value']
+            from_value = sp['from_value']
+            card_or_cash = sp['card_or_cash']
+            city_get = sp['city_get']
+            city_give = sp['city_give']
+            country_get = sp['country_get']
+            country_give = sp['country_give']
+        
+        if to_value_type == 'crypto':
+            city_get = None
+            city_give = None
+
+        first_city = await bc.get_data_from_city(
+            from_value=from_value,
+            to_value=to_value,
+            city=city_give,
+            from_value_type=from_value_type,
+            to_value_type=to_value_type,
+            card_or_cash=card_or_cash,
+            count=count,
+            give=True
+            )
+        second_city = await bc.get_data_from_city(
+            from_value=from_value,
+            to_value=to_value,
+            city=city_give,
+            from_value_type=from_value_type,
+            to_value_type=to_value_type,
+            card_or_cash=card_or_cash,
+            count=count,
+            get= True
+            )
+        if first_city is not None and second_city is not None:
+            if city_get != None and city_give != None:
+                await message.answer(
+                    f"Перевод из {country_give} ({city_give}) {first_city['Отдаете']} в {country_get} ({city_get}) {second_city['Получаете']}\n При курсе {first_city['Курс']}"
+                    )
+            else:
+                await message.answer(
+                    f"Перевод {first_city['Отдаете']} в {second_city['Получаете']}\n При курсе {first_city['Курс']}"
+                    )
+        else:
+            await message.answer("Данных по вашему запросу не найденно")
+        
+        await state.finish()
 
             
 

@@ -18,7 +18,8 @@ from bs4 import BeautifulSoup as b
 #     "sortm":"0",
 #     "tsid":"0",
 
-    
+a = '15000'
+print(int(a))
 #     }
 # 
 # import random

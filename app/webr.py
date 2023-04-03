@@ -4,10 +4,11 @@ import random
 
 from time import sleep
 
-from aiogram import types, Bot
+from aiogram import Bot
 from aiogram.utils.exceptions import MessageIsTooLong
 
 from config.auth import token
+from config.exhandler import logs_writer
 
 from utils import shortcuts
 
@@ -40,7 +41,8 @@ class BestchangeUserAction:
             try:
                 r = requests.get(url, headers=headers, params=params, proxies=proxies)
                 print(r.status_code)
-            except:
+            except Exception as ex:
+                logs_writer(ex)
                 proxy_list.remove(current_proxy)
                 current_proxy = proxy_list[random.randint(0,len(proxy_list)-1)]
                 proxies = {'https':current_proxy}
@@ -98,8 +100,8 @@ class BestchangeUserAction:
             with open('all values.txt', 'r', encoding='utf-8') as f:
                 links = f.readlines()
 
-        except FileNotFoundError:
-            print('Файл еще не создан')
+        except FileNotFoundError as ex:
+            logs_writer(f"{ex} - файл еще не создан")
             return None
         for link in links:
             name = []
@@ -124,7 +126,8 @@ class BestchangeUserAction:
         table = soup.find('table', {'id':'content_table'})
         try:
             tbody = table.find('tbody')
-        except AttributeError:
+        except AttributeError as ex:
+            logs_writer(ex)
             return None
         trow = tbody.find_all('tr')
         result = []
@@ -201,6 +204,7 @@ class BestchangeUserAction:
             try:
                 await bot.send_message(channel_id, "\n".join(result))
             except MessageIsTooLong:
+                
                 new_len = len(result) / 2
                 await bot.send_message(channel_id, "\n".join(result[:new_len]))
                 await bot.send_message(channel_id, "\n".join(result[new_len:]))

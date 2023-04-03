@@ -6,7 +6,7 @@ class BotNav:
     def start_keyboard(self):
         return ReplyKeyboardMarkup(
             resize_keyboard=True
-            ).add(KeyboardButton('Получить информацию по курсу обмена💵')).add(KeyboardButton('Посмотреть перечень валют💸'))
+            ).add(KeyboardButton('Получить информацию по курсу обмена💵'))
 
     def admin_keyboard(self):
         return ReplyKeyboardMarkup(
