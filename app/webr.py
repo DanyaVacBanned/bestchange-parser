@@ -30,15 +30,18 @@ bot = Bot(token)
 
 class BestchangeUserAction:
     
-    async def get_html_code(self, url, params = None) -> b:
+    async def get_html_code(self, url, data = None) -> b:
+        max_tries = 3
         while True:
             headers = {
             "user-agent":ua.random,
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
                 }
-        
-                    
-            r = requests.get(url,params=params, headers=headers)
+
+            if data is None:        
+                r = requests.get(url, headers=headers)
+            else:
+                r = requests.post(url, headers=headers, data=data)
             print(r.status_code)
             if r.status_code == 200:
                 return b(r.text, 'lxml')
@@ -55,6 +58,17 @@ class BestchangeUserAction:
                     print(ex)
                     logs_writer(ex)
                     continue
+            elif r.status_code == 404:
+                logs_writer('404 page not found')
+                return None
+            
+            else:
+                max_tries -= 1
+                if max_tries == 0:
+                    logs_writer('another exception during request')
+                    return None
+                continue
+                
             
                 
  
@@ -119,8 +133,10 @@ class BestchangeUserAction:
         return values, all_names
 
 
-    async def get_rate(self, url, params = None):
-        soup = await self.get_html_code(url, params)
+    async def get_rate(self, url, data = None):
+        soup = await self.get_html_code(url, data)
+        if soup == None:
+            return None
         table = soup.find('table', {'id':'content_table'})
         try:
             tbody = table.find('tbody')
@@ -152,7 +168,7 @@ class BestchangeUserAction:
         cities = shortcuts.get_cities_and_ids_from_file()
         while True:
             result = []
-            params1 = {
+            data = {
                         "action":"getrates",
                         "page":"rates",
                         "from":"105",
@@ -168,47 +184,56 @@ class BestchangeUserAction:
                         "sortm":"0",
                         "tsid":"0",
                     }
-            tinkoff_to_usdt = await self.get_rate('https://www.bestchange.ru/', params1)
+            tinkoff_to_usdt = await self.get_rate('https://www.bestchange.ru/action.php', data) # Первый курс для рассчета
           
-            usdt_price_in_rubbles = tinkoff_to_usdt[1]["Отдаете"]
+            usdt_price_in_rubbles = tinkoff_to_usdt[1 if len(tinkoff_to_usdt) > 1 else 0]["Отдаете"].split()[0]
             for city in cities:
                 if city[1] in capitals:
                     city_id = str(city[0])
                     country = shortcuts.get_key_by_one_of_values('countries_and_cities',city[1])
-                    params2 = {
+                    data2 = {
                         "action":"getrates",
                         "page":"rates",
                         "from":"10",
                         "to":"89",
                         "city":city_id,
-                        "type":"give",
-                        "give":"1",
+                        "type":"",
+                        "give":"",
                         "get":"",
                         "commission":"0",
                         "light":"0",
-                        "sort":"",
-                        "range":"",
-                        "sortm":"0",
+                        "sort":"from",
+                        "range":"asc",
+                        "sortm":"1",
                         "tsid":"0",
                     }
-                    usdt_to_cashusd = await self.get_rate('https://www.bestchange.ru/',params2)
+                    usdt_to_cashusd = await self.get_rate('https://www.bestchange.ru/action.php',data2)
+                    if usdt_to_cashusd is None:
+                        continue
+                    # with open('logs.txt','a',encoding='utf-8') as f:
+                    #     f.write(f'{city[1]} - {float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Получаете"].split()[0]) % 1}')
+                    if float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"].split()[0]) % 1 != 0:
+                        # tinkoff_to_cashusd_percent = float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'].split()[0]) * (1 + float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"].split()[0]) % 1)
+                        if float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'].split()[0]) > 1:
+                            tinkoff_to_cashusd_percent = round((float(usdt_price_in_rubbles) * (1 + float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'].split()[0]) % 1)) * 1.01,2)
+                        else:
+                            tinkoff_to_cashusd_percent = round((float(usdt_price_in_rubbles) * (float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'].split()[0]) % 1)) * 1.01,2)
+                        
+                        usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'] = str(tinkoff_to_cashusd_percent) + " руб"
+                    else:
+                        usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'] = str(round(float(usdt_price_in_rubbles), 2)) + ' руб'
                     
-                    if float(usdt_to_cashusd[1]["Отдаете"].split()[0]) % 1 != 0:
-                        tinkoff_to_cashusd_percent = float(usdt_to_cashusd[1]['Получаете'].split()[0]) * (1 + float(usdt_to_cashusd[1]["Отдаете"].split()[0]) % 1)
-                        usdt_to_cashusd[1]['Получаете'] = str(tinkoff_to_cashusd_percent) + " " + " ".join(usdt_to_cashusd[1]['Получаете'].split()[1:])
-                    usdt_to_cashusd[1]['Отдаете'] = usdt_price_in_rubbles
-                    
-                    result.append(f'{country} ({city[1]})\n{usdt_to_cashusd[1]["Отдаете"]} {usdt_to_cashusd[1]["Получаете"]}')
+                    result.append(f'Россия (Москва) - {country} ({city[1]}) отдаете {usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"]} = получаете 1 $')
             try:
-                await bot.send_message(channel_id, "\n".join(result))
+                await bot.send_message(channel_id, "\n\n".join(sorted(result)))
             except MessageIsTooLong:
-                
                 new_len = len(result) / 2
-                await bot.send_message(channel_id, "\n".join(result[:new_len]))
-                await bot.send_message(channel_id, "\n".join(result[new_len:]))
+                await bot.send_message(channel_id, "\n\n".join(sorted(result[:new_len])))
+                await bot.send_message(channel_id, "\n\n".join(sorted(result[new_len:])))
+
 
         # print(usdt_price_in_rubbles)
-            await asyncio.sleep(24*60*60)
+            await asyncio.sleep(3600)
 
 
     async def get_capitals(self):
@@ -246,10 +271,14 @@ class BestchangeUserAction:
         
 
     
-    async def get_course(self, params):
-        soup = await self.get_html_code('https://www.bestchange.ru/',params)
-        div = soup.find('div',class_='m-hint')
-        course = div.find_all('span',class_='bt')[-1].text
+    async def get_course(self, data):
+        soup = await self.get_html_code('https://www.bestchange.ru/action.php',data)
+        try:
+            div = soup.find('div',class_='m-hint')
+            course = div.find_all('span',class_='bt')[-1].text
+        except AttributeError as ex:
+            logs_writer(ex)
+            return None
         return course
 
 
@@ -262,6 +291,7 @@ class BestchangeUserAction:
             from_value_type, 
             to_value_type, 
             card_or_cash,
+            to_card_or_cash,
             count,
             give = False,
             get = False,
@@ -272,7 +302,7 @@ class BestchangeUserAction:
             cities_and_ids = [cit.strip().split() for cit in cities]
             for collection in cities_and_ids:
                 if collection[1].lower() == city.lower():
-                    city_id = collection[1]
+                    city_id = collection[0]
                     break
         else:
             city_id = "0"
@@ -281,18 +311,26 @@ class BestchangeUserAction:
                 from_values = shortcuts.get_values_by_key_from_json('values-card',from_value)
                 
             elif card_or_cash == "cash":
-                from_values = shortcuts.get_values_by_key_from_json('values', from_value)
+                if from_value_type == 'rubles':
+                    from_value_id = '91'
+                else:
+                    from_values = shortcuts.get_values_by_key_from_json('values', from_value)
 
         elif from_value_type == "crypto":
             from_values = shortcuts.get_values_by_key_from_json('crypto-values', from_value)
-        from_value_id = str("".join(list(from_values[0].values())))
+        try:
+            from_value_id = str("".join(list(from_values[0].values())))
+        except UnboundLocalError:
+            pass
         with open('values.txt','r',encoding='utf-8') as file:
             for line in file.readlines():
                 if str(line.split(';')[0]) == from_value_id:
                     from_value_name = line.split(';')[1]
         if to_value_type == "other":
-            
-            to_values = shortcuts.get_values_by_key_from_json('values', to_value)
+            if to_card_or_cash == "cash":
+                to_values = shortcuts.get_values_by_key_from_json('values', to_value)
+            elif to_card_or_cash == "card":
+                to_values = shortcuts.get_values_by_key_from_json('values-card', to_value)
         elif to_value_type == "crypto":
             to_values = shortcuts.get_values_by_key_from_json('crypto-values', to_value)
         
@@ -301,7 +339,7 @@ class BestchangeUserAction:
             for line in file.readlines():
                 if line.split(';')[0] == to_value_id:
                     to_value_name = line.split(';')[1]
-        params = {
+        data = {
         "action":"getrates",
         "page":"rates",
         "from":str(from_value_id),
@@ -319,22 +357,27 @@ class BestchangeUserAction:
         }
 
         with open('requests.txt','a') as file:
-            file.write(f'req to https://www.bestchange.ru/ \n with params: {params}\n')
-        rates = await self.get_rate('https://www.bestchange.ru/',params=params)
-        if rates is None:
+            file.write(f'req to https://www.bestchange.ru/action.php \n with data: {data}\n')
+        rates = await self.get_rate('https://www.bestchange.ru/action.php',data=data)
+        print(rates)
+        course = await self.get_course(data=data)
+        if (rates is None) or (course is None):
             return None
+        print(len(rates))
         if len(rates) >= 1:
             if give:
                 return {
                     "Обменник":rates[0]['Обменник'],
                     "Отдаете":rates[0]['Отдаете'],
-                    "Курс":f"1 {to_value_name} = {await self.get_course(params)} {from_value_name}"
+                    "from_value_name":from_value_name,
+                    'course':course
                     }
             elif get:
                 return {
                     "Обменник":rates[0]['Обменник'],
                     "Получаете":rates[0]['Получаете'],
-                    "Курс":f"1 {to_value_name} = {await self.get_course(params)} {from_value_name}"
+                    "to_value_name":to_value_name,
+                    
                     }
         else:
             return None

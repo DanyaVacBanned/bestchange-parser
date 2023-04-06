@@ -41,6 +41,10 @@ def get_proxy_list():
         proxies = f.read().strip().split()
     return proxies
 
+
+
+def sort_list_for_posts(result: list):
+    print(sorted(result))
     
 
 
@@ -48,3 +52,4 @@ def get_proxy_list():
 
 
 
+    
