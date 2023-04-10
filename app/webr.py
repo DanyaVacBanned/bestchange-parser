@@ -302,18 +302,38 @@ class BestchangeUserAction:
                          to_card_or_cash, 
                          from_card_or_cash,
                          from_value_type,
-                         to_value_type
+                         to_value_type,
+                         from_city,
+                         to_city
                          ):
         if from_value_type in ['other', 'rubles']:
             if from_card_or_cash == "cash":
                 from_value_id = list(shortcuts.get_values_by_key_from_json('values', from_value)[0].values())[0]
-                
+                if from_value_type == "rubles":
+                    from_value_id = '91'
             elif from_card_or_cash == "card":
                 from_value_id = list(shortcuts.get_values_by_key_from_json('values-card', from_value)[0].values())[0]
         elif from_value_type == 'crypto':
             from_value_id = list(shortcuts.get_values_by_key_from_json('crypto-values', from_value)[0].values())[0]
-
-
+        from_city_id = "0"  
+        to_city_id = "0"
+        if from_city is not None:
+            with open('cities.txt','r',encoding='utf-8') as f:
+                cities = f.readlines()
+            cities_and_ids = [cit.strip().split() for cit in cities]
+            for collection in cities_and_ids:
+                if collection[1].lower() == from_city.lower():
+                    from_city_id = collection[0]
+                    break
+        if to_city is not None:
+            with open('cities.txt','r',encoding='utf-8') as f:
+                cities = f.readlines()
+            cities_and_ids = [cit.strip().split() for cit in cities]
+            for collection in cities_and_ids:
+                if collection[1].lower() == to_city.lower():
+                    to_city_id = collection[0]
+                    break
+                        
         if to_value_type in ['other', 'rubles']:
             if to_card_or_cash == "cash":
                 to_value_id = list(shortcuts.get_values_by_key_from_json('values', to_value)[0].values())[0]
@@ -326,23 +346,42 @@ class BestchangeUserAction:
         data = {
                 "action":"getrates",
                 "page":"rates",
-                "from":"10",
-                "to":str(from_value_id),
-                "city":"0",
-                "type":"give",
-                "give":"1",
-                "get":"",
+                "from":str(from_value_id),
+                "to":"10",
+                "city":str(from_city_id),
+                "type":"get",
+                "give":"",
+                "get":"1",
                 "commission":"0",
                 "light":"0",
-                "sort":"",
-                "range":"",
-                "sortm":"0",
+                "sort":"from",
+                "range":"asc",
+                "sortm":"1",
                 "tsid":"0",
             }
         
        
         from_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=data)
-        from_value_rate = from_value_rate_req[0]["Получаете"]
+        if from_value_rate_req is None:
+
+            data = {
+                "action":"getrates",
+                "page":"rates",
+                "from":str(from_value_id),
+                "to":"10",
+                "city":"0",
+                "type":"get",
+                "give":"",
+                "get":"1",
+                "commission":"0",
+                "light":"0",
+                "sort":"from",
+                "range":"asc",
+                "sortm":"1",
+                "tsid":"0",
+            }
+            from_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=data)
+        from_value_rate = from_value_rate_req[1 if len(from_value_rate_req) > 1 else 0]["Отдаете"]
         fv_join = []
         for fv in from_value_rate.split():
             try:
@@ -351,12 +390,13 @@ class BestchangeUserAction:
             except ValueError:
                 break
         from_value_count = float("".join(fv_join))
+        print(from_value_count)
         to_data = {
             "action":"getrates",
             "page":"rates",
             "from":"10",
             "to":str(to_value_id),
-            "city":"0",
+            "city":str(to_city_id),
             "type":"get",
             "give":"",
             "get":"1",
@@ -369,6 +409,24 @@ class BestchangeUserAction:
             }
 
         to_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=to_data)
+        if to_value_rate_req is None:
+            to_data = {
+            "action":"getrates",
+            "page":"rates",
+            "from":"10",
+            "to":str(to_value_id),
+            "city":str(to_city_id),
+            "type":"get",
+            "give":"",
+            "get":"1",
+            "commission":"0",
+            "light":"0",
+            "sort":"",
+            "range":"",
+            "sortm":"0",
+            "tsid":"0",
+            }
+            to_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=to_data)
         to_value_rate = to_value_rate_req[1 if len(to_value_rate_req) > 1 else 0]["Отдаете"]
         sv_join = []
         for sv in to_value_rate.split():
@@ -378,7 +436,7 @@ class BestchangeUserAction:
             except ValueError:
                 break
         to_value_count = float("".join(sv_join))
-        course = to_value_count * from_value_count
+        course = round(from_value_count * to_value_count * 1.01, 2)
         if course <= 1:
             from_value_course = 1 / course
             return f"1 {from_value} = {from_value_course} {to_value}"
@@ -421,6 +479,7 @@ class BestchangeUserAction:
             elif card_or_cash == "cash":
                 if from_value_type == 'rubles':
                     from_value_id = '91'
+                    
                 else:
                     from_values = shortcuts.get_values_by_key_from_json('values', from_value)
 
@@ -430,34 +489,30 @@ class BestchangeUserAction:
             from_value_id = str("".join(list(from_values[0].values())))
         except UnboundLocalError:
             pass
-        with open('values.txt','r',encoding='utf-8') as file:
-            for line in file.readlines():
-                if str(line.split(';')[0]) == from_value_id:
-                    from_value_name = line.split(';')[1]
+        
         if to_value_type == "other":
             if to_card_or_cash == "cash":
                 to_values = shortcuts.get_values_by_key_from_json('values', to_value)
+                
             elif to_card_or_cash == "card":
                 to_values = shortcuts.get_values_by_key_from_json('values-card', to_value)
         elif to_value_type == "crypto":
             to_values = shortcuts.get_values_by_key_from_json('crypto-values', to_value)
         
         to_value_id = str("".join(list(to_values[0].values())))
-        with open('values.txt','r',encoding='utf-8') as file:
-            for line in file.readlines():
-                if line.split(';')[0] == to_value_id:
-                    to_value_name = line.split(';')[1]
+        from_value_name = from_value.lower()
+        to_value_name = to_value.lower()
         if give:
             if card_or_cash == "cash":
                 data = {
                 "action":"getrates",
                 "page":"rates",
-                "from":"10",
-                "to":str(from_value_id),
+                "from":str(from_value_id),
+                "to":"10",
                 "city":str(city_id),
-                "type":"get",
-                "give":"",
-                "get":str(count),
+                "type":"give",
+                "give":str(count),
+                "get":'',
                 "commission":"0",
                 "light":"0",
                 "sort":"",
@@ -469,12 +524,12 @@ class BestchangeUserAction:
                 data = {
                     "action":"getrates",
                     "page":"rates",
-                    "from":"10",
-                    "to":str(from_value_id),
+                    "from":str(from_value_id),
+                    "to":"10",
                     "city":"0",
-                    "type":"get",
-                    "give":"",
-                    "get":str(count),
+                    "type":"give",
+                    "give":str(count),
+                    "get":'',
                     "commission":"0",
                     "light":"0",
                     "sort":"",
@@ -486,24 +541,16 @@ class BestchangeUserAction:
             usdt_to_from_value = await self.get_rate('https://www.bestchange.ru/action.php',data=data)
             fv_join = []
             
-            for fv in usdt_to_from_value[1 if len(usdt_to_from_value) > 1 else 0]['Отдаете'].split():
+            for fv in usdt_to_from_value[1 if len(usdt_to_from_value) > 1 else 0]['Получаете'].split():
                 try:
                     float(fv)
                     fv_join.append(fv)
                 except ValueError:
                     break
-            first_value_count_for_join = []
-            first_value_count = usdt_to_from_value[1 if len(usdt_to_from_value) > 1 else 0]['Получаете'].split()
-            for fvc in first_value_count:
-                try:
-                    float(fvc)
-                    first_value_count_for_join.append(fvc)
-                except ValueError:
-                    break
-            first_value_count = float(''.join(first_value_count_for_join))
+            
             usdt_given = str(''.join(fv_join))
             rate_in_first_city = f"{str(count)} {from_value_name}"
-
+            
         if get: 
             if to_card_or_cash == "cash":
                 data_result = {
@@ -557,7 +604,7 @@ class BestchangeUserAction:
                     break
         
             one_usdt_in_to_value = float(''.join(sv_join))
-            rate_in_second_city = f"{one_usdt_in_to_value * 1.01} {to_value_name}"
+            rate_in_second_city = f"{round(one_usdt_in_to_value * 1.01,2)} {to_value_name}"
         
 
 

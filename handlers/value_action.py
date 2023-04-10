@@ -22,7 +22,7 @@ async def get_value_type(message: types.Message, state = FSMContext):
     if message.text == "Рубли":
         async with state.proxy() as sp:
             sp['from_value_type'] = 'rubles'
-            sp['from_value'] = message.text
+            
         await message.answer('Наличными или на карту?', reply_markup=bot_navigation.card_or_cash())
         await GetActualRate.CARD_OR_CASH.set()
 
@@ -76,11 +76,15 @@ async def get_rubbles(message: types.Message, state=FSMContext):
         if message.text == 'Наличные💵':
             async with state.proxy() as sp:
                 sp['card_or_cash'] = 'cash'
+                if value_type == "rubles":
+                    sp['from_value'] = 'Наличные рубли'
                 
 
         elif message.text == "Карта💳":
             async with state.proxy() as sp:
                 sp['card_or_cash'] = 'card'
+                if value_type == "rubles":
+                    sp['from_value'] = 'Рубли на карту'
         
         if value_type == 'rubles':
             await message.answer('Какой тип валюты вы хотите получить?',reply_markup=bot_navigation.crypto_or_other())
@@ -193,12 +197,12 @@ async def get_to_value(message: types.Message, state=FSMContext):
                
 
                
-            avaliable_cities_from_value = await bc.get_countries('tether-trc20', from_value_name)
+            avaliable_cities_from_value = await bc.get_countries(from_value_name, 'tether-trc20')
             avaliable_cities_to_value = await bc.get_countries('tether-trc20', to_value_name)
             if avaliable_cities_to_value is not None:
                 async with state.proxy() as sp:
                     sp['avaliable_cities_to_value'] = avaliable_cities_to_value
-            avaliable_cities_from_value_one_city = await bc.get_countries('tether-trc20', from_value_name, one_city=True)
+            avaliable_cities_from_value_one_city = await bc.get_countries(from_value_name, 'tether-trc20', one_city=True)
             avaliable_cities_to_value_one_city = await bc.get_countries('tether-trc20', to_value_name, one_city=True)
             if avaliable_cities_from_value is not None:
                 avaliable_cities = [list(av_city.keys())[0].title() for av_city in avaliable_cities_from_value]
@@ -313,6 +317,7 @@ async def city_get_handler(message: types.Message, state = FSMContext):
             await message.answer('Сколько вы хотите обменять? (Введите число)')
             async with state.proxy() as sp:
                 sp['city_get'] = None
+                sp['country_get'] = None
             await GetActualRate.COUNT.set()
 
     else:
@@ -415,7 +420,9 @@ async def get_count(message: types.Message, state = FSMContext):
             to_card_or_cash=to_card_or_cash,
             from_card_or_cash=card_or_cash,
             from_value_type=from_value_type,
-            to_value_type=to_value_type
+            to_value_type=to_value_type,
+            from_city=city_give,
+            to_city=city_get
             )
         if first_city != None and second_city != None:
             if city_get != None and city_give != None:
