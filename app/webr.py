@@ -329,23 +329,6 @@ class BestchangeUserAction:
                 "from":"10",
                 "to":str(from_value_id),
                 "city":"0",
-                "type":"get",
-                "give":"",
-                "get":"1",
-                "commission":"0",
-                "light":"0",
-                "sort":"",
-                "range":"",
-                "sortm":"0",
-                "tsid":"0",
-            }
-        
-        from_data_given = {
-                "action":"getrates",
-                "page":"rates",
-                "from":"10",
-                "to":str(from_value_id),
-                "city":"0",
                 "type":"give",
                 "give":"1",
                 "get":"",
@@ -356,18 +339,10 @@ class BestchangeUserAction:
                 "sortm":"0",
                 "tsid":"0",
             }
-        from_value_given_req = await self.get_rate('https://www.bestchange.ru/action.php', data=from_data_given)
-        from_value_given = from_value_given_req[0]['Получаете']
-        fvg_join = []
-        for fv in from_value_given.split():
-            try:
-                float(fv)
-                fvg_join.append(fv)
-            except ValueError:
-                break
-        one_usdt_in_from_value = float("".join(fvg_join))
+        
+       
         from_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=data)
-        from_value_rate = from_value_rate_req[0]["Отдаете"]
+        from_value_rate = from_value_rate_req[0]["Получаете"]
         fv_join = []
         for fv in from_value_rate.split():
             try:
@@ -382,9 +357,9 @@ class BestchangeUserAction:
             "from":"10",
             "to":str(to_value_id),
             "city":"0",
-            "type":"give",
-            "give":str(from_value_count),
-            "get":"",
+            "type":"get",
+            "give":"",
+            "get":"1",
             "commission":"0",
             "light":"0",
             "sort":"",
@@ -394,7 +369,7 @@ class BestchangeUserAction:
             }
 
         to_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=to_data)
-        to_value_rate = to_value_rate_req[0]["Получаете"]
+        to_value_rate = to_value_rate_req[1 if len(to_value_rate_req) > 1 else 0]["Отдаете"]
         sv_join = []
         for sv in to_value_rate.split():
             try:
@@ -403,10 +378,13 @@ class BestchangeUserAction:
             except ValueError:
                 break
         to_value_count = float("".join(sv_join))
-        if to_value_count >= 1:
-            return f"1 {from_value} = {to_value_count} {to_value}"
+        course = to_value_count * from_value_count
+        if course <= 1:
+            from_value_course = 1 / course
+            return f"1 {from_value} = {from_value_course} {to_value}"
         else:
-            return f"1 {to_value} = {one_usdt_in_from_value} {from_value}"
+            
+            return f"1 {to_value} = {course} {from_value}"
 
 
     async def get_data_from_city(

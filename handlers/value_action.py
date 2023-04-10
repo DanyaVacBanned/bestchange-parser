@@ -211,7 +211,7 @@ async def get_to_value(message: types.Message, state=FSMContext):
             elif avaliable_cities_to_value_one_city is not None:
                 avaliable_cities = [avaliable_cities_to_value_one_city]
 
-
+            
             
             if avaliable_cities == []:
                 await message.answer('К сожалению, обменных пунктов по вашему запросу не найденно')
@@ -233,8 +233,15 @@ async def get_to_value(message: types.Message, state=FSMContext):
                 async with state.proxy() as sp:
                     sp['avaliable_cities'] = avaliable_cities
                     sp['avaliable_countries_list'] = countries_list
-                await message.answer('В какой стране вы хотите отдать?', reply_markup=bot_navigation.multiply_keyboard(countries_list))
-                await GetActualRate.COUNTRY_GIVE.set()
+                if avaliable_cities_from_value is not None or avaliable_cities_from_value_one_city is not None:
+                    await message.answer('В какой стране вы хотите отдать?', reply_markup=bot_navigation.multiply_keyboard(countries_list))
+                    await GetActualRate.COUNTRY_GIVE.set()
+                else:
+                    async with state.proxy() as sp:
+                        sp['city_give'] = None
+                        sp['country_give'] = None
+                    await message.answer('В какой стране вы хотите получить', reply_markup=bot_navigation.multiply_keyboard(countries_list))
+                    await GetActualRate.COUNTRY_GET.set()
         else:
             trade_status = await bc.get_trade_status(from_value_name, to_value_name)
             if trade_status is False:
@@ -280,7 +287,7 @@ async def city_get_handler(message: types.Message, state = FSMContext):
     if message.text != 'Вернуться в меню':
         async with state.proxy() as sp:
             sp['city_give'] = message.text
-            
+            to_card_or_cash = sp['to_card_or_cash']
             try:
                 avaliable_cities_to_value = sp['avaliable_cities_to_value']
                 avaliable_cities = [list(av_city.keys())[0].title() for av_city in avaliable_cities_to_value]
@@ -299,9 +306,14 @@ async def city_get_handler(message: types.Message, state = FSMContext):
                 await state.finish()
             
             
-        
-        await message.answer('В какой стране вы хотите получить?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
-        await GetActualRate.COUNTRY_GET.set()
+        if to_card_or_cash == "cash":
+            await message.answer('В какой стране вы хотите получить?',reply_markup=bot_navigation.multiply_keyboard(countries_list))
+            await GetActualRate.COUNTRY_GET.set()
+        else:
+            await message.answer('Сколько вы хотите обменять? (Введите число)')
+            async with state.proxy() as sp:
+                sp['city_get'] = None
+            await GetActualRate.COUNT.set()
 
     else:
         await state.finish()
@@ -347,7 +359,7 @@ async def city_give_handler(message: types.Message, state=FSMContext):
 async def get_count(message: types.Message, state = FSMContext):
     if message.text != "Вернуться в меню":
         try:
-            count = int(message.text)
+            count = float(message.text)
         except ValueError as ex:
             logs_writer(ex)
             await message.answer('Некорректный ввод, попробуйте еще раз')
