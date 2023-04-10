@@ -43,6 +43,8 @@ class BestchangeUserAction:
             else:
                 r = requests.post(url, headers=headers, data=data)
             print(r.status_code)
+            # with open('index.html','w') as file:
+            #     file.write(r.text)
             if r.status_code == 200:
                 return b(r.text, 'lxml')
             elif r.status_code == 429:
@@ -95,14 +97,37 @@ class BestchangeUserAction:
             for name in names[:len(names)-1]:
                 f.write(f'{name}\n')
 
-    async def get_countries(self, value1, value2) -> list:
+    async def get_countries(self, value1, value2, one_city = False) -> list:
         url = f'https://www.bestchange.ru/{value1}-to-{value2}.html'
         soup = await self.get_html_code(url)
         big_text = soup.find('div', {'id':'big_text'})
+        
+        if one_city:
+            try:
+                city = big_text.find('b', class_='gray').text
+            except AttributeError:
+                return None
+            return city
+
         links = big_text.find_all('a')
         result = [{link.text.lower():link.get('href')} for link in links]
+        if result[2:] == []:
+            return None
         return result[2:]
     
+
+
+
+    async def get_trade_status(self, value1, value2) -> bool:
+        url = f"https://www.bestchange.ru/{value1}-to-{value2}.html"
+        soup = await self.get_html_code(url)
+        span = soup.find('span', class_='bt').text.lower()
+        if span == "отсутствуют":
+            return False
+        else:
+            return True
+        
+
 
     def sort_value_names(self) -> list:
         all_code_names = list()
@@ -233,7 +258,8 @@ class BestchangeUserAction:
 
 
         # print(usdt_price_in_rubbles)
-            await asyncio.sleep(3600)
+            delay = 24*3600*3
+            await asyncio.sleep(delay)
 
 
     async def get_capitals(self):
@@ -268,19 +294,119 @@ class BestchangeUserAction:
                 }
             result.append(collection)
         return result
+
+
+    async def get_course(self, 
+                         from_value, 
+                         to_value, 
+                         to_card_or_cash, 
+                         from_card_or_cash,
+                         from_value_type,
+                         to_value_type
+                         ):
+        if from_value_type in ['other', 'rubles']:
+            if from_card_or_cash == "cash":
+                from_value_id = list(shortcuts.get_values_by_key_from_json('values', from_value)[0].values())[0]
+                
+            elif from_card_or_cash == "card":
+                from_value_id = list(shortcuts.get_values_by_key_from_json('values-card', from_value)[0].values())[0]
+        elif from_value_type == 'crypto':
+            from_value_id = list(shortcuts.get_values_by_key_from_json('crypto-values', from_value)[0].values())[0]
+
+
+        if to_value_type in ['other', 'rubles']:
+            if to_card_or_cash == "cash":
+                to_value_id = list(shortcuts.get_values_by_key_from_json('values', to_value)[0].values())[0]
+            elif to_card_or_cash == "card":
+                to_value_id = list(shortcuts.get_values_by_key_from_json('values-card', to_value)[0].values())[0]
+
+        elif to_value_type == "crypto":
+            to_value_id = list(shortcuts.get_values_by_key_from_json('crypto-values', to_value)[0].values())[0]
+
+        data = {
+                "action":"getrates",
+                "page":"rates",
+                "from":"10",
+                "to":str(from_value_id),
+                "city":"0",
+                "type":"get",
+                "give":"",
+                "get":"1",
+                "commission":"0",
+                "light":"0",
+                "sort":"",
+                "range":"",
+                "sortm":"0",
+                "tsid":"0",
+            }
         
+        from_data_given = {
+                "action":"getrates",
+                "page":"rates",
+                "from":"10",
+                "to":str(from_value_id),
+                "city":"0",
+                "type":"give",
+                "give":"1",
+                "get":"",
+                "commission":"0",
+                "light":"0",
+                "sort":"",
+                "range":"",
+                "sortm":"0",
+                "tsid":"0",
+            }
+        from_value_given_req = await self.get_rate('https://www.bestchange.ru/action.php', data=from_data_given)
+        from_value_given = from_value_given_req[0]['Получаете']
+        fvg_join = []
+        for fv in from_value_given.split():
+            try:
+                float(fv)
+                fvg_join.append(fv)
+            except ValueError:
+                break
+        one_usdt_in_from_value = float("".join(fvg_join))
+        from_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=data)
+        from_value_rate = from_value_rate_req[0]["Отдаете"]
+        fv_join = []
+        for fv in from_value_rate.split():
+            try:
+                float(fv)
+                fv_join.append(fv)
+            except ValueError:
+                break
+        from_value_count = float("".join(fv_join))
+        to_data = {
+            "action":"getrates",
+            "page":"rates",
+            "from":"10",
+            "to":str(to_value_id),
+            "city":"0",
+            "type":"give",
+            "give":str(from_value_count),
+            "get":"",
+            "commission":"0",
+            "light":"0",
+            "sort":"",
+            "range":"",
+            "sortm":"0",
+            "tsid":"0",
+            }
 
-    
-    async def get_course(self, data):
-        soup = await self.get_html_code('https://www.bestchange.ru/action.php',data)
-        try:
-            div = soup.find('div',class_='m-hint')
-            course = div.find_all('span',class_='bt')[-1].text
-        except AttributeError as ex:
-            logs_writer(ex)
-            return None
-        return course
-
+        to_value_rate_req = await self.get_rate('https://www.bestchange.ru/action.php', data=to_data)
+        to_value_rate = to_value_rate_req[0]["Получаете"]
+        sv_join = []
+        for sv in to_value_rate.split():
+            try:
+                float(sv)
+                sv_join.append(sv)
+            except ValueError:
+                break
+        to_value_count = float("".join(sv_join))
+        if to_value_count >= 1:
+            return f"1 {from_value} = {to_value_count} {to_value}"
+        else:
+            return f"1 {to_value} = {one_usdt_in_from_value} {from_value}"
 
 
     async def get_data_from_city(
@@ -295,7 +421,11 @@ class BestchangeUserAction:
             count,
             give = False,
             get = False,
+            usdt_given_count = None
             ):
+        print(from_value)
+        print(to_value)
+        print(city)
         if city is not None:
             with open('cities.txt','r',encoding='utf-8') as f:
                 cities = f.readlines()
@@ -339,48 +469,126 @@ class BestchangeUserAction:
             for line in file.readlines():
                 if line.split(';')[0] == to_value_id:
                     to_value_name = line.split(';')[1]
-        data = {
-        "action":"getrates",
-        "page":"rates",
-        "from":str(from_value_id),
-        "to":str(to_value_id),
-        "city":str(city_id),
-        "type":"give",
-        "give":str(count),
-        "get":"",
-        "commission":"0",
-        "light":"0",
-        "sort":"",
-        "range":"",
-        "sortm":"0",
-        "tsid":"0",
-        }
+        if give:
+            if card_or_cash == "cash":
+                data = {
+                "action":"getrates",
+                "page":"rates",
+                "from":"10",
+                "to":str(from_value_id),
+                "city":str(city_id),
+                "type":"get",
+                "give":"",
+                "get":str(count),
+                "commission":"0",
+                "light":"0",
+                "sort":"",
+                "range":"",
+                "sortm":"0",
+                "tsid":"0",
+                }
+            else:
+                data = {
+                    "action":"getrates",
+                    "page":"rates",
+                    "from":"10",
+                    "to":str(from_value_id),
+                    "city":"0",
+                    "type":"get",
+                    "give":"",
+                    "get":str(count),
+                    "commission":"0",
+                    "light":"0",
+                    "sort":"",
+                    "range":"",
+                    "sortm":"0",
+                    "tsid":"0",
+                }
 
-        with open('requests.txt','a') as file:
-            file.write(f'req to https://www.bestchange.ru/action.php \n with data: {data}\n')
-        rates = await self.get_rate('https://www.bestchange.ru/action.php',data=data)
-        print(rates)
-        course = await self.get_course(data=data)
-        if (rates is None) or (course is None):
-            return None
-        print(len(rates))
-        if len(rates) >= 1:
-            if give:
-                return {
-                    "Обменник":rates[0]['Обменник'],
-                    "Отдаете":rates[0]['Отдаете'],
-                    "from_value_name":from_value_name,
-                    'course':course
+            usdt_to_from_value = await self.get_rate('https://www.bestchange.ru/action.php',data=data)
+            fv_join = []
+            
+            for fv in usdt_to_from_value[1 if len(usdt_to_from_value) > 1 else 0]['Отдаете'].split():
+                try:
+                    float(fv)
+                    fv_join.append(fv)
+                except ValueError:
+                    break
+            first_value_count_for_join = []
+            first_value_count = usdt_to_from_value[1 if len(usdt_to_from_value) > 1 else 0]['Получаете'].split()
+            for fvc in first_value_count:
+                try:
+                    float(fvc)
+                    first_value_count_for_join.append(fvc)
+                except ValueError:
+                    break
+            first_value_count = float(''.join(first_value_count_for_join))
+            usdt_given = str(''.join(fv_join))
+            rate_in_first_city = f"{str(count)} {from_value_name}"
+
+        if get: 
+            if to_card_or_cash == "cash":
+                data_result = {
+                "action":"getrates",
+                "page":"rates",
+                "from":"10",
+                "to":str(to_value_id),
+                "city":str(city_id),
+                "type":"give",
+                "give":str(usdt_given_count),
+                "get":"",
+                "commission":"0",
+                "light":"0",
+                "sort":"",
+                "range":"",
+                "sortm":"0",
+                "tsid":"0",
+                }
+            else:
+
+                data_result = {
+                    "action":"getrates",
+                    "page":"rates",
+                    "from":"10",
+                    "to":str(to_value_id),
+                    "city":"0",
+                    "type":"give",
+                    "give":str(usdt_given_count),
+                    "get":"",
+                    "commission":"0",
+                    "light":"0",
+                    "sort":"",
+                    "range":"",
+                    "sortm":"0",
+                    "tsid":"0",
                     }
-            elif get:
-                return {
-                    "Обменник":rates[0]['Обменник'],
-                    "Получаете":rates[0]['Получаете'],
-                    "to_value_name":to_value_name,
-                    
-                    }
-        else:
-            return None
+
+            with open('requests.txt','w') as f:
+                f.write(str(data_result))
+            
+            usdt_to_to_value = await self.get_rate('https://www.bestchange.ru/action.php',data=data_result)
+            
+        
+            sv_join = []
+            
+            for sv in usdt_to_to_value[1 if len(usdt_to_to_value) > 1 else 0]['Получаете'].split():
+                try:
+                    float(sv)
+                    sv_join.append(sv)
+                except ValueError:
+                    break
+        
+            one_usdt_in_to_value = float(''.join(sv_join))
+            rate_in_second_city = f"{one_usdt_in_to_value * 1.01} {to_value_name}"
+        
+
+
+        
+
+        if give:
+            return rate_in_first_city, usdt_given
+        elif get:
+            return rate_in_second_city
 
         
 
