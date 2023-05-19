@@ -1,0 +1,32 @@
+[
+{"Рубли на карту":{"visa-mastercard-rub":"59"}}, 
+{"Доллары на карту":{"visa-mastercard-usd":"58"}},
+{"Турецкая лира на карту":{"visa-mastercard-try":"83"}}, 
+
+
+{"Евро на карту":{"visa-mastercard-euro":"65"}},
+{"Гривна на карту":{"visa-mastercard-uah":"60"}},
+{"Белорусский рубль на карту":{"visa-mastercard-byr":"54"}},
+{"Тенге на карту":{"visa-mastercard-kzt":"111"}},
+{"Шведская крона на карту":{"visa-mastercard-sek":"155"}},
+{"Фунт на карту":{"visa-mastercard-gbp":"146"}},
+
+{"Злотый на карту":{"visa-mastercard-pln":"38"}},
+{"Киргизский сом на карту":{"visa-mastercard-kgs":"25"}}, 
+{"Крона на карту":{"visa-mastercard-czk":"224"}}, 
+{"Жэньминьби на карту":{"visa-mastercard-cny":"30"}},
+{"Лари на карту":{"visa-mastercard-gel":"238"}}, 
+{"Армянский драм на карту":{"visa-mastercard-amd":"5"}}, 
+{"Канадский доллар на карту":{"visa-mastercard-cad":"221"}},
+{"Нигерийская найра на карту":{"visa-mastercard-ngn":"258"}}, 
+{"Венгерский форинт на карту":{"visa-mastercard-huf":"223"}}, 
+{"Болгарский лев на карту":{"visa-mastercard-bgn":"222"}},
+{"Азербайджанский манат на карту":{"visa-mastercard-azn":"237"}}, 
+{"Молдавский лей на карту":{"visa-mastercard-mdl":"194"}},
+{"Норвежская крона на карту":{"visa-mastercard-nok":"225"}}, 
+{"Узбекский сум на карту":{"visa-mastercard-uzs":"239"}},
+{"Таджикский сомони на карту":{"visa-mastercard-tjs":"240"}}
+ 
+
+
+]
