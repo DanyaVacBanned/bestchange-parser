@@ -215,6 +215,7 @@ class BestchangeUserAction:
             if city_iter in capitals:
                 target_city = city_iter
                 break
+        
             
 
         cities_ids = shortcuts.get_cities_and_ids_from_file()
@@ -252,6 +253,8 @@ class BestchangeUserAction:
                         }
                 usdt_to_cashusd = await self.get_rate('https://www.bestchange.ru/action.php',data2)
                 print('usdt_to_cashusd')
+                
+                
                 if usdt_to_cashusd is None:
                     
                     for city_citer in cities: # ["Гонконг", "Пекин", "Гуанчжоу"]
@@ -274,7 +277,7 @@ class BestchangeUserAction:
                             "range":"asc",
                             "sortm":"1",
                             "tsid":"0",
-                        }
+                            }
                         usdt_to_cashusd = await self.get_rate('https://www.bestchange.ru/action.php',data2)
                         if usdt_to_cashusd is not None:
                             break
@@ -296,12 +299,7 @@ class BestchangeUserAction:
                     }
                 tinkoff_to_usdt = await self.get_rate('https://www.bestchange.ru/action.php', data)
                 usdt_price_in_rubbles = tinkoff_to_usdt[1 if len(tinkoff_to_usdt) > 1 else 0]["Отдаете"].split()[0]
-                                
-                        
 
-
-
-                    
                 if float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"].split()[0]) % 1 != 0:
                     if float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'].split()[0]) > 1:
                         tinkoff_to_cashusd_percent = round((float(usdt_price_in_rubbles) * (1 + float(usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'].split()[0]) % 1)) * 1.01,2)
@@ -313,7 +311,7 @@ class BestchangeUserAction:
                     usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'] = str(round(float(usdt_price_in_rubbles), 2)) + ' руб'
                 
                 
-                result.append(f'Россия (Москва) - {country} ({city}) отдаете {usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"]} = получаете 1 $')
+                result.append(f'Россия (Москва) - {country} ({city}) отдаете {usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"]} = получаете 1 $\nОбмен при встрече🧍👜🧍‍♂\nТелеграм   @RustemSabirov\n@Bruknog')
                 if city is not None:
                     try:
                         await bot.send_message(channel_id, "\n\n".join(sorted(result)), disable_notification=True)
@@ -333,7 +331,7 @@ class BestchangeUserAction:
                     await message.answer('В выбранной стране отсутствуют обменники')
                     break
                 # delay = 24*3600
-                delay = 3600*24
+                delay = 3600*24*3
                 await asyncio.sleep(delay)
 
             except (ConnectionError, ConnectTimeout, Timeout, TimeoutError) as ex:
@@ -455,7 +453,7 @@ class BestchangeUserAction:
                         usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]['Отдаете'] = str(round(float(usdt_price_in_rubbles), 2)) + ' руб'
             
             
-                    result.append(f'Россия (Москва) - {country} ({target_city}) отдаете {usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"]} = получаете 1 $')
+                    result.append(f'Россия (Москва) - {country} ({target_city}) отдаете {usdt_to_cashusd[1 if len(usdt_to_cashusd) > 1 else 0]["Отдаете"]} = получаете 1 $\nОбмен при встрече🧍👜🧍‍♂\nТелеграм   @RustemSabirov\n@Bruknog')
 
                     
             try:
@@ -476,7 +474,7 @@ class BestchangeUserAction:
                 continue
 
 
-            delay = 24*3600*1
+            delay = 24*3600*3
             await asyncio.sleep(delay)
 
 
