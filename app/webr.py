@@ -207,7 +207,7 @@ class BestchangeUserAction:
         capitals = shortcuts.get_capitals_from_file()
         cities = shortcuts.get_values_by_key_from_json('countries_and_cities', country)[0]
         city = None
-        city_id = 0
+        city_id = 500
         if len(cities) == 1:
             city = cities[0]
         target_city = None
@@ -252,7 +252,7 @@ class BestchangeUserAction:
                             "tsid":"0",
                         }
                 usdt_to_cashusd = await self.get_rate('https://www.bestchange.ru/action.php',data2)
-                print('usdt_to_cashusd')
+                print(usdt_to_cashusd)
                 
                 
                 if usdt_to_cashusd is None:
